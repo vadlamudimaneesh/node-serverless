@@ -1,0 +1,16 @@
+{
+  "name": "node-serverless",
+  "version": "1.0.0",
+  "description": "node application using lambda, dynamoDB and apigateway",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Maneesh",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.699.0",
+    "@aws-sdk/util-dynamodb": "^3.699.0",
+    "serverless-iam-roles-per-function": "^3.2.0"
+  }
+}
