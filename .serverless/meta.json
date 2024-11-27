@@ -1,0 +1,127 @@
+{
+  "D:\\myworks\\node-serverless": {
+    "versionSfCore": null,
+    "versionFramework": "4.4.13",
+    "isWithinCompose": false,
+    "isCompose": false,
+    "composeOrgName": null,
+    "composeResolverProviders": {
+      "default-aws-credential-resolver": "<REDACTED>",
+      "sls": {
+        "instance": {
+          "credentials": "<REDACTED>",
+          "serviceConfigFile": {
+            "service": "node-serverless",
+            "provider": {
+              "name": "aws",
+              "runtime": "nodejs18.x",
+              "stage": "dev",
+              "region": "us-east-1",
+              "versionFunctions": true
+            },
+            "functions": {
+              "userApi": {
+                "handler": "handlers/userHandler.handler",
+                "events": [
+                  {
+                    "http": {
+                      "path": "users/{proxy+}",
+                      "method": "any"
+                    }
+                  }
+                ]
+              }
+            },
+            "plugins": [
+              "serverless-offline"
+            ]
+          },
+          "configFileDirPath": "D:\\myworks\\node-serverless",
+          "config": {
+            "type": "sls"
+          },
+          "options": {},
+          "stage": "dev",
+          "dashboard": null,
+          "logger": {
+            "namespace": "s:core:resolver:sls",
+            "prefix": null,
+            "prefixColor": null
+          },
+          "_credentialsPromise": "<REDACTED>"
+        },
+        "resolvers": {}
+      }
+    },
+    "composeServiceName": null,
+    "servicePath": "D:\\myworks\\node-serverless",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "node-serverless",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs18.x",
+        "stage": "dev",
+        "region": "us-east-1",
+        "versionFunctions": true
+      },
+      "functions": {
+        "userApi": {
+          "handler": "handlers/userHandler.handler",
+          "events": [
+            {
+              "http": {
+                "path": "users/{proxy+}",
+                "method": "any"
+              }
+            }
+          ]
+        }
+      },
+      "plugins": [
+        "serverless-offline"
+      ]
+    },
+    "serviceRawFile": "service: node-serverless\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: nodejs18.x\r\n\r\nfunctions:\r\n  userApi:\r\n    handler: handlers/userHandler.handler\r\n    events:\r\n      - http:\r\n          path: users/{proxy+}\r\n          method: any\r\n\r\nplugins:\r\n  - serverless-offline  # Add this line\r\n",
+    "command": [
+      "offline"
+    ],
+    "options": {},
+    "error": {
+      "message": "Serverless plugin \"serverless-offline\" not found. Make sure it's installed and listed in the \"plugins\" section of your serverless config file. Use the --debug flag to learn more.",
+      "stack": "ServerlessError2: Serverless plugin \"serverless-offline\" not found. Make sure it's installed and listed in the \"plugins\" section of your serverless config file. Use the --debug flag to learn more.\n    at PluginManager.resolveServicePlugins (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:925:2671)\n    at async PluginManager.loadAllPlugins (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:925:1293)\n    at async Serverless.init (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:932:9985)\n    at async runFramework (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:980:1336)\n    at async route (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:1010:14772)\n    at async Object.run2 [as run] (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:1010:15173)\n    at async run3 (file:///C:/Users/manee/.serverless/releases/4.4.13/package/dist/sf-core.js:1010:16435)",
+      "code": "PLUGIN_NOT_FOUND"
+    },
+    "params": {},
+    "machineId": "5ce54d75cbbde02ad6dd8d80422ebbf5",
+    "stage": "dev",
+    "accessKeyV2": "<REDACTED>",
+    "accessKeyV1": "<REDACTED>",
+    "orgId": "bce201dc-1447-4d55-94d8-7e54c76e4303",
+    "orgName": "maneeshvadlamudi",
+    "userId": "PqJsHL4w7W7v473v3t",
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": true,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "userName": "maneeshvadlamudi",
+    "subscription": null,
+    "userEmail": "maneeshvadlamudi@gmail.com",
+    "serviceProviderAwsRegion": "us-east-1",
+    "serviceProviderAwsCredentials": "<REDACTED>",
+    "serviceProviderAwsAccountId": "850995578388",
+    "projectType": "traditional",
+    "versionSf": "4.4.13",
+    "serviceUniqueId": null,
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}

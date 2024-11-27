@@ -4,10 +4,12 @@
   "description": "node application using lambda, dynamoDB and apigateway",
   "main": "app.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev nodemon app.js",
-    "local": "cross-env NODE_ENV=local nodemon app.js",
-    "test": "cross-env NODE_ENV=testing node app.js",
-    "start": "cross-env NODE_ENV=production node app.js"
+    "local": "serverless offline",
+    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:test": "serverless deploy --stage test",
+    "deploy:prod": "serverless deploy --stage prod",
+    "remove:dev": "serverless remove --stage dev",
+    "remove:prod": "serverless remove --stage prod"
   },
   "author": "Maneesh",
   "license": "ISC",
@@ -16,12 +18,15 @@
     "@aws-sdk/lib-dynamodb": "^3.699.0",
     "@aws-sdk/util-dynamodb": "^3.699.0",
     "dotenv": "^16.4.5",
+    "express": "^4.21.1",
     "fs": "^0.0.1-security",
     "nodemon": "^3.1.7",
     "path": "^0.12.7",
     "serverless-iam-roles-per-function": "^3.2.0"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "serverless": "^4.4.13",
+    "serverless-offline": "^14.3.4"
   }
 }

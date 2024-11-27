@@ -1,0 +1,16 @@
+service: node-serverless
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+
+functions:
+  userApi:
+    handler: handlers/userHandler.handler
+    events:
+      - http:
+          path: users/{proxy+}
+          method: any
+
+plugins:
+  - serverless-offline  # Add this line
