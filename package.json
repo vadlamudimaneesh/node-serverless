@@ -4,13 +4,24 @@
   "description": "node application using lambda, dynamoDB and apigateway",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "cross-env NODE_ENV=dev nodemon app.js",
+    "local": "cross-env NODE_ENV=local nodemon app.js",
+    "test": "cross-env NODE_ENV=testing node app.js",
+    "start": "cross-env NODE_ENV=production node app.js"
   },
   "author": "Maneesh",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.699.0",
+    "@aws-sdk/lib-dynamodb": "^3.699.0",
     "@aws-sdk/util-dynamodb": "^3.699.0",
+    "dotenv": "^16.4.5",
+    "fs": "^0.0.1-security",
+    "nodemon": "^3.1.7",
+    "path": "^0.12.7",
     "serverless-iam-roles-per-function": "^3.2.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
