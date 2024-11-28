@@ -3,14 +3,38 @@ service: node-serverless
 provider:
   name: aws
   runtime: nodejs18.x
+  stage: ${opt:stage, 'local'}  # Default to 'local' if no stage is provided
+  region: 'us-west-2'  # Region picked from .env.local or fallback to us-east-1
+  timeout: 30
+
+iamRoleStatements:
+  - Effect: "Allow" 
+    Action:
+      - "apigateway:POST"
+      - "apigateway:PUT"
+      - "apigateway:GET"
+      - "apigateway:DELETE"
+      - "apigateway:PATCH"
+    Resource: "arn:aws:apigateway:${self:provider.region}::/restapis/*"
+  - Effect: "Allow"
+    Action:
+      - "dynamodb:*"  # Full access to all DynamoDB actions
+    Resource:
+      - "arn:aws:dynamodb:${self:provider.region}:*:table/*" 
 
 functions:
-  userApi:
-    handler: handlers/userHandler.handler
+  getAllUsers:
+    handler: handlers/userHandler.getAllUsers
     events:
       - http:
-          path: users/{proxy+}
-          method: any
-
+          path: users/getAllUsers
+          method: get
+  createUser:
+    handler: handlers/userHandler.createUser
+    events:
+      - http:
+          path: users/createUser
+          method: post
 plugins:
   - serverless-offline  # Add this line
+  - serverless-dotenv-plugin

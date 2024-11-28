@@ -1,11 +1,15 @@
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb")
+const dynamoose = require("dynamoose");
+require("dotenv").config();  // Load environment variables
 
-const dbClient = new DynamoDBClient({
-    region: process.env.AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    }
-  });
+// Configure AWS credentials for Dynamoose
+const AWS = require("aws-sdk");
+AWS.config.update({
+  region: process.env.AWS_REGION,
+  // accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  // secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
 
-  module.exports = { dbClient };
+// Set Dynamoose to use the AWS SDK
+dynamoose.aws.sdk = AWS;
+
+module.exports = dynamoose;  // Export the configured dynamoose instance
