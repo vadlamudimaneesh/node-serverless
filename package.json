@@ -3,12 +3,7 @@
   "version": "1.0.0",
   "description": "node application using lambda, dynamoDB and apigateway",
   "scripts": {
-    "local": "nodemon --exec npx serverless offline --stage local --watch handlers --watch controllers --watch serverless.yml --ext js,yml",
-    "deploy:dev": "serverless deploy --stage dev",
-    "deploy:test": "serverless deploy --stage test",
-    "deploy:prod": "serverless deploy --stage prod",
-    "remove:dev": "serverless remove --stage dev",
-    "remove:prod": "serverless remove --stage prod"
+    "local": "nodemon --exec npx serverless offline --watch handlers --watch controllers --watch serverless.yml --ext js,yml"
   },
   "author": "Maneesh",
   "license": "ISC",

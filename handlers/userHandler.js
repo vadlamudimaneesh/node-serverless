@@ -3,7 +3,7 @@ const userController = require("../controllers/users");
 
 async function getAllUsers() {
   try {
-    // console.log(event, "------------6")
+    console.log( "------------6")
     const allUsers = await userController.getAllUsers();
     console.log(allUsers, "_-------------> 7");
     return {

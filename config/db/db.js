@@ -1,15 +1,16 @@
-const dynamoose = require("dynamoose");
-require("dotenv").config();  // Load environment variables
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient, PutItemCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 
-// Configure AWS credentials for Dynamoose
-const AWS = require("aws-sdk");
-AWS.config.update({
-  region: process.env.AWS_REGION,
-  // accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  // secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+// Initialize the DynamoDB Client
+const dbClient = new DynamoDBClient({
+  region: process.env.AWS_REGION || 'us-west-2',  // Default region if not provided in environment
+  credentials: {
+    accessKeyId: process.env.ID,
+    secretAccessKey: process.env.KEY,
+  },
 });
 
-// Set Dynamoose to use the AWS SDK
-dynamoose.aws.sdk = AWS;
+// Use DynamoDB DocumentClient to simplify working with DynamoDB items
+const docClient = DynamoDBDocumentClient.from(dbClient);
 
-module.exports = dynamoose;  // Export the configured dynamoose instance
+module.exports = { docClient, PutItemCommand, ScanCommand };

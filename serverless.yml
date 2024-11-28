@@ -1,40 +1,60 @@
-service: node-serverless
+service: node-serverless  # Your service name
 
 provider:
   name: aws
   runtime: nodejs18.x
-  stage: ${opt:stage, 'local'}  # Default to 'local' if no stage is provided
-  region: 'us-west-2'  # Region picked from .env.local or fallback to us-east-1
+  stage: ${opt:stage, 'dev'}
+  region: us-west-2
   timeout: 30
+  environment:
+    USERS_TABLE: ${self:custom.usersTableName}  # Reference to the existing Users table
 
-iamRoleStatements:
-  - Effect: "Allow" 
-    Action:
-      - "apigateway:POST"
-      - "apigateway:PUT"
-      - "apigateway:GET"
-      - "apigateway:DELETE"
-      - "apigateway:PATCH"
-    Resource: "arn:aws:apigateway:${self:provider.region}::/restapis/*"
-  - Effect: "Allow"
-    Action:
-      - "dynamodb:*"  # Full access to all DynamoDB actions
-    Resource:
-      - "arn:aws:dynamodb:${self:provider.region}:*:table/*" 
+custom:
+  usersTableName: Users  # Use this for consistency across the service
+
+plugins:
+  - serverless-offline                # For local development
+  - serverless-dotenv-plugin          # Load environment variables (optional)
+  - serverless-iam-roles-per-function # Enables function-specific IAM roles
 
 functions:
-  getAllUsers:
-    handler: handlers/userHandler.getAllUsers
-    events:
-      - http:
-          path: users/getAllUsers
-          method: get
   createUser:
     handler: handlers/userHandler.createUser
     events:
       - http:
           path: users/createUser
           method: post
-plugins:
-  - serverless-offline  # Add this line
-  - serverless-dotenv-plugin
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:PutItem"
+        Resource: arn:aws:dynamodb:us-west-2:850995578388:table/${self:custom.usersTableName}  # Dynamically use table name
+
+  getAllUsers:
+    handler: handlers/userHandler.getAllUsers
+    events:
+      - http:
+          path: users/getAllUsers
+          method: get
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:Scan"
+        Resource: arn:aws:dynamodb:us-west-2:850995578388:table/${self:custom.usersTableName}  # Dynamically use table name
+
+# Commenting out or removing this section to avoid attempting to create the table if it exists
+# resources:
+#   Resources:
+#     UsersTable:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:custom.usersTableName}
+#         AttributeDefinitions:
+#           - AttributeName: userId
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: userId
+#             KeyType: HASH
+#         ProvisionedThroughput:
+#           ReadCapacityUnits: 1
+#           WriteCapacityUnits: 1
