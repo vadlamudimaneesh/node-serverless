@@ -31,8 +31,16 @@ functions:
           method: post
 
   getAllUsers:
-    handler: handlers/userHandler.getAllUsers
+    handler: handlers/userHandler.getUser
     events:
       - http:
-          path: users/getAllUsers
+          path: users/getUser
           method: get
+  deleteUser:
+    handler: handlers/userHandler.deleteUser
+    events:
+      - http:
+          path: users/deleteUser
+          method: delete
+
+

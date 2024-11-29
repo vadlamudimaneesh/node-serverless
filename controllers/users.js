@@ -4,6 +4,7 @@ const {
   PutItemCommand,
   GetItemCommand,
   ScanCommand,
+  DeleteItemCommand,
   DescribeTableCommand,
 } = require("@aws-sdk/client-dynamodb");
 const { dbClient } = require("../config/db/db");
@@ -80,11 +81,10 @@ async function createUser(event) {
         code: 400,
         status: "failed",
         data: {
-          message: "User already exists",
-          userData: existingUser.Items,
+          message: "User already exists"
         },
       };
-      console.log(response)
+      console.log(response);
       return response;
     } else {
       // Create new user object
@@ -99,7 +99,6 @@ async function createUser(event) {
         gender: { S: body.gender },
         mobileNumber: { S: body.mobileNumber },
       };
-
       const putParams = {
         TableName: tableName,
         Item: newUser,
@@ -116,11 +115,129 @@ async function createUser(event) {
       return response;
     }
   } catch (error) {
-    console.log(error);
+    console.log(error, ":: createUser");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
   }
-  return;
+}
+
+// let tablesList = await dbClient.send(new ListTablesCommand({}))
+// let tableDesciption = await dbClient.send( new DescribeTableCommand({TableName : 'Users'}) )
+// let userData = await dbClient.send(new GetItemCommand({TableName : tableName, Key : { userId : { S : query.userId } } }))
+
+async function getUser(event) {
+  try {
+    let tableName = schema.UsersTable.tableName;
+    let query = event.queryStringParameters;
+    console.log(query, "--------query");
+    if (query == null) {
+      let usersList = await dbClient.send(
+        new ScanCommand({ TableName: tableName })
+      );
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "Successfully fetched users list !!!",
+          usersList: usersList.Items,
+        },
+      };
+      return response;
+    } else {
+      let userData = await dbClient.send(
+        new GetItemCommand({
+          TableName: tableName,
+          Key: { userId: { S: query.userId } },
+        })
+      );
+      console.log(userData, "---------userData");
+      if (userData.Item != undefined) {
+        let response = {
+          code: 200,
+          status: "success",
+          data: {
+            message: "Successfully fetched user data !!!",
+            userData: userData.Item,
+          },
+        };
+        return response;
+      } else {
+        let response = {
+          code: 404,
+          status: "success",
+          data: {
+            message: "User not found!!!",
+          },
+        };
+        return response;
+      }
+    }
+  } catch (error) {
+    console.log(error, ":: getAllUsers");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
+  }
+}
+
+async function deleteUser(event) {
+  try {
+    let tableName = schema.UsersTable.tableName;
+    let body = JSON.parse(event.body);
+    let deleteItem = await dbClient.send(
+      new DeleteItemCommand({
+        TableName: tableName,
+        Key: { userId: { S: body.userId } },
+        ReturnValues: "ALL_OLD",
+      })
+    );
+    if (deleteItem.Attributes) {
+      console.log("Item deleted:", deleteItem.Attributes);
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "Successfully deleted the user !!!",
+          deletedUser: deleteItem.Attributes 
+        },
+      };
+      return response;
+    } else {
+      let response = {
+        code: 404,
+        status: "failed",
+        data: {
+          message:  "User not found !!!"
+        },
+      };
+      return response;
+    }
+  } catch (error) {
+    console.log(error, ":: deleteUser");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
+  }
 }
 
 module.exports = {
   createUser,
+  getUser,
+  deleteUser,
 };

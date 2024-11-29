@@ -1,11 +1,12 @@
 const userController = require("../controllers/users");
 
-
-async function getAllUsers() {
+async function getUser(event) {
   try {
-    const allUsers = await userController.getAllUsers();
-
-    return { MSG : JSON.stringify({ allUsers }) }
+    const getUser = await userController.getUser(event);
+    return { 
+      statusCode: getUser.code, 
+      body: JSON.stringify(getUser) 
+    };
   } catch (error) {
     return {
       statusCode: 500,
@@ -20,7 +21,10 @@ async function getAllUsers() {
 async function createUser(event) {
   try {
     const userData = await userController.createUser(event);
-    return { body : JSON.stringify(userData) }
+    return { 
+      statusCode: userData.code, 
+      body: JSON.stringify(userData) 
+    };
   } catch (error) {
     return {
       statusCode: 500,
@@ -32,9 +36,26 @@ async function createUser(event) {
   }
 }
 
-
+async function deleteUser(event) {
+  try {
+    const userData = await userController.deleteUser(event);
+    return { 
+      statusCode: userData.code, 
+      body: JSON.stringify(userData) 
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Failed to create users.",
+        details: error.message,
+      }),
+    };
+  }
+}
 
 module.exports = {
-  getAllUsers,
-  createUser
+  getUser,
+  createUser,
+  deleteUser,
 };
