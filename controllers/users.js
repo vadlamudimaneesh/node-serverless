@@ -4,71 +4,84 @@ const {
   PutItemCommand,
   GetItemCommand,
   ScanCommand,
+  DescribeTableCommand,
 } = require("@aws-sdk/client-dynamodb");
-const { docClient } = require("../config/db/db");
-const { Users } = require("../models/users.collections");
+const { dbClient } = require("../config/db/db");
 const { v1: uuidv1 } = require("uuid");
+const schema = require("../schema");
 
-async function getAllUsers() {
+async function tableChecker(tableName) {
+  const describeCommand = new DescribeTableCommand({
+    TableName: tableName,
+  });
   try {
-    // Define the scan parameters
-    const params = {
-      TableName: process.env.USERS_TABLE,  // Reference to the table name in environment variables
-    };
 
-    // Perform the scan operation using the DocumentClient
-    const data = await docClient.send(new ScanCommand(params));
+    let isTableCreated = await dbClient.send(describeCommand);
+    if (isTableCreated.Table.TableStatus === 'ACTIVE') {
+      console.log("Table is already created and active", isTableCreated);
+      return true;
+    }
 
-    // If data is found, return success response
-    if (data.Items && data.Items.length > 0) {
-      return {
-        code: 200,
-        status: "success",
-        data: {
-          message: "Users List fetched successfully",
-          usersList: data.Items,  // Items from the scan response
-        },
-      };
-    } else {
-      return {
-        code: 404,
-        status: "error",
-        data: {
-          message: "No users found",
-        },
-      };
+    if (isTableCreated.Table.TableStatus === 'CREATING') {
+      console.log("Table is being created. Waiting for the table to become ACTIVE...");
+      while (isTableCreated.Table.TableStatus !== 'ACTIVE') {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds
+        isTableCreated = await dbClient.send(describeCommand);
+      }
+      console.log("Table is now ACTIVE and ready for operations");
+      return true;
     }
   } catch (error) {
-    console.error("Error scanning table:", error);
-    return {
-      code: 500,
-      status: "error",
-      data: {
-        message: "Failed to retrieve users list!!",
-        details: error.message,  // Include error message in the response
-      },
-    };
+    if (error.name === "ResourceNotFoundException") {
+      console.log("Table does not exist. Creating table...");
+      const params = {
+        TableName: tableName,
+        AttributeDefinitions: [{ AttributeName: "userId", AttributeType: "S" }],
+        KeySchema: [{ AttributeName: "userId", KeyType: "HASH" }],
+        BillingMode: "PAY_PER_REQUEST",
+      };
+      const createCommand = new CreateTableCommand(params);
+      const data = await dbClient.send(createCommand);
+      console.log("Table creation initiated:", data);
+
+      // Now wait for table to become ACTIVE
+      let isTableCreated = await dbClient.send(describeCommand);
+      while (isTableCreated.Table.TableStatus !== 'ACTIVE') {
+        console.log("Waiting for table to become ACTIVE...");
+        await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds
+        isTableCreated = await dbClient.send(describeCommand);
+      }
+      console.log("Table is now ACTIVE and ready for operations");
+      return true;
+    }
+    throw error;
   }
 }
 
+
 async function createUser(event) {
   try {
-    console.log(process.env.USER, "------------ environment");
-
-    let body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-
-    // Check if user already exists using a scan query
+    let tableName = schema.UsersTable.tableName;
+    await tableChecker(tableName);
+    let body =
+      typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    console.log(body, "----------body");
+    console.log(typeof body.email, body.email);
     const params = {
-      TableName: process.env.USERS_TABLE,
-      FilterExpression: "email = :email",  // Filter expression to check for email
+      TableName: tableName,
+      FilterExpression: "email = :email",
       ExpressionAttributeValues: {
-        ":email": body.email,
+        ":email": { S: body.email },
       },
     };
-
-    // Perform the scan operation to check if the user already exists
-    const existingUser = await docClient.send(new ScanCommand(params));
-    console.log(existingUser, "-----------> existing user check");
+    console.log(params, "----------params");
+    let existingUser;
+    try {
+      existingUser = await dbClient.send(new ScanCommand(params));
+      console.log(existingUser, "-----------> existing user check");
+    } catch (err) {
+      console.log(err, "-----------107");
+    }
 
     if (existingUser.Items && existingUser.Items.length > 0) {
       let response = {
@@ -83,53 +96,45 @@ async function createUser(event) {
     } else {
       // Create new user object
       const newUser = {
-        userId: uuidv1(),
-        email: body.email,
-        status: "active",
-        password: body.password,
-        role: [body.role],
-        firstName: body.firstName,
-        lastName: body.lastName,
-        gender: body.gender,
-        mobileNumber: body.mobileNumber,
+        userId: { S: uuidv1() },
+        email: { S: body.email },
+        status: { S: "active" },
+        password: { S: body.password },
+        role: { L: [{ S: body.role }] },
+        firstName: { S: body.firstName },
+        lastName: { S: body.lastName },
+        gender: { S: body.gender },
+        mobileNumber: { S : body.mobileNumber },
       };
 
-      // Put new user into DynamoDB
       const putParams = {
-        TableName: process.env.USERS_TABLE,
+        TableName: tableName,
         Item: newUser,
       };
+      console.log(putParams, "Put Params")
+      try {
+        await dbClient.send(new PutItemCommand(putParams));
+        console.log("------------> saved", newUser);
+        let response = {
+          code: 200,
+          status: "success",
+          data: {
+            message: "User created successfully",
+            userData: newUser,
+          },
+        };
+        return response;
+      } catch (eror) {
+        console.log(eror);
+      }
 
-      // Perform the put operation to save the new user
-      await docClient.send(new PutItemCommand(putParams));
-      console.log("------------> saved", newUser);
-
-      let response = {
-        code: 200,
-        status: "success",
-        data: {
-          message: "User created successfully",
-          userData: newUser,
-        },
-      };
-      return response;
     }
   } catch (error) {
     console.log(error);
-    let response = {
-      code: 500,
-      status: "error",
-      data: {
-        message: "Failed to retrieve users.",
-        details: error.message,
-      },
-    };
-    return response;
   }
+  return;
 }
 
-
 module.exports = {
-  createUser,
-  getAllUsers
+  createUser
 };

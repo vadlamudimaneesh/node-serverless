@@ -1,2 +1,9 @@
-/node_modules
-/.serverless
+# Node dependencies
+node_modules
+.env
+
+# Serverless build artifacts
+.serverless
+
+# Logs
+*.log

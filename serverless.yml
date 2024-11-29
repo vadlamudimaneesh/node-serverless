@@ -1,16 +1,21 @@
-service: node-serverless  # Your service name
+service: node-serverless
 
 provider:
   name: aws
   runtime: nodejs18.x
-  stage: ${opt:stage, 'dev'}
+  stage: dev
   region: us-west-2
   timeout: 30
-  environment:
-    USERS_TABLE: ${self:custom.usersTableName}  # Reference to the existing Users table
 
-custom:
-  usersTableName: Users  # Use this for consistency across the service
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:PutItem
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:CreateTable   # Add permission to create tables
+      Resource: arn:aws:dynamodb:us-west-2:850995578388:table/* # Wildcard for all tables in the region
 
 plugins:
   - serverless-offline                # For local development
@@ -24,11 +29,6 @@ functions:
       - http:
           path: users/createUser
           method: post
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - "dynamodb:PutItem"
-        Resource: arn:aws:dynamodb:us-west-2:850995578388:table/${self:custom.usersTableName}  # Dynamically use table name
 
   getAllUsers:
     handler: handlers/userHandler.getAllUsers
@@ -36,25 +36,3 @@ functions:
       - http:
           path: users/getAllUsers
           method: get
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - "dynamodb:Scan"
-        Resource: arn:aws:dynamodb:us-west-2:850995578388:table/${self:custom.usersTableName}  # Dynamically use table name
-
-# Commenting out or removing this section to avoid attempting to create the table if it exists
-# resources:
-#   Resources:
-#     UsersTable:
-#       Type: AWS::DynamoDB::Table
-#       Properties:
-#         TableName: ${self:custom.usersTableName}
-#         AttributeDefinitions:
-#           - AttributeName: userId
-#             AttributeType: S
-#         KeySchema:
-#           - AttributeName: userId
-#             KeyType: HASH
-#         ProvisionedThroughput:
-#           ReadCapacityUnits: 1
-#           WriteCapacityUnits: 1
