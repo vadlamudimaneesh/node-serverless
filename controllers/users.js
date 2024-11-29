@@ -15,17 +15,18 @@ async function tableChecker(tableName) {
     TableName: tableName,
   });
   try {
-
     let isTableCreated = await dbClient.send(describeCommand);
-    if (isTableCreated.Table.TableStatus === 'ACTIVE') {
+    if (isTableCreated.Table.TableStatus === "ACTIVE") {
       console.log("Table is already created and active", isTableCreated);
       return true;
     }
 
-    if (isTableCreated.Table.TableStatus === 'CREATING') {
-      console.log("Table is being created. Waiting for the table to become ACTIVE...");
-      while (isTableCreated.Table.TableStatus !== 'ACTIVE') {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds
+    if (isTableCreated.Table.TableStatus === "CREATING") {
+      console.log(
+        "Table is being created. Waiting for the table to become ACTIVE..."
+      );
+      while (isTableCreated.Table.TableStatus !== "ACTIVE") {
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5 seconds
         isTableCreated = await dbClient.send(describeCommand);
       }
       console.log("Table is now ACTIVE and ready for operations");
@@ -46,9 +47,9 @@ async function tableChecker(tableName) {
 
       // Now wait for table to become ACTIVE
       let isTableCreated = await dbClient.send(describeCommand);
-      while (isTableCreated.Table.TableStatus !== 'ACTIVE') {
+      while (isTableCreated.Table.TableStatus !== "ACTIVE") {
         console.log("Waiting for table to become ACTIVE...");
-        await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5 seconds
         isTableCreated = await dbClient.send(describeCommand);
       }
       console.log("Table is now ACTIVE and ready for operations");
@@ -58,15 +59,12 @@ async function tableChecker(tableName) {
   }
 }
 
-
 async function createUser(event) {
   try {
     let tableName = schema.UsersTable.tableName;
     await tableChecker(tableName);
     let body =
       typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    console.log(body, "----------body");
-    console.log(typeof body.email, body.email);
     const params = {
       TableName: tableName,
       FilterExpression: "email = :email",
@@ -74,14 +72,8 @@ async function createUser(event) {
         ":email": { S: body.email },
       },
     };
-    console.log(params, "----------params");
     let existingUser;
-    try {
-      existingUser = await dbClient.send(new ScanCommand(params));
-      console.log(existingUser, "-----------> existing user check");
-    } catch (err) {
-      console.log(err, "-----------107");
-    }
+    existingUser = await dbClient.send(new ScanCommand(params));
 
     if (existingUser.Items && existingUser.Items.length > 0) {
       let response = {
@@ -92,6 +84,7 @@ async function createUser(event) {
           userData: existingUser.Items,
         },
       };
+      console.log(response)
       return response;
     } else {
       // Create new user object
@@ -104,30 +97,23 @@ async function createUser(event) {
         firstName: { S: body.firstName },
         lastName: { S: body.lastName },
         gender: { S: body.gender },
-        mobileNumber: { S : body.mobileNumber },
+        mobileNumber: { S: body.mobileNumber },
       };
 
       const putParams = {
         TableName: tableName,
         Item: newUser,
       };
-      console.log(putParams, "Put Params")
-      try {
-        await dbClient.send(new PutItemCommand(putParams));
-        console.log("------------> saved", newUser);
-        let response = {
-          code: 200,
-          status: "success",
-          data: {
-            message: "User created successfully",
-            userData: newUser,
-          },
-        };
-        return response;
-      } catch (eror) {
-        console.log(eror);
-      }
-
+      await dbClient.send(new PutItemCommand(putParams));
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "User created successfully",
+          userData: newUser,
+        },
+      };
+      return response;
     }
   } catch (error) {
     console.log(error);
@@ -136,5 +122,5 @@ async function createUser(event) {
 }
 
 module.exports = {
-  createUser
+  createUser,
 };

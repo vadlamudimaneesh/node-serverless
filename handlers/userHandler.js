@@ -3,13 +3,9 @@ const userController = require("../controllers/users");
 
 async function getAllUsers() {
   try {
-    console.log( "------------6")
     const allUsers = await userController.getAllUsers();
-    console.log(allUsers, "_-------------> 7");
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ allUsers }),
-    };
+
+    return { MSG : JSON.stringify({ allUsers }) }
   } catch (error) {
     return {
       statusCode: 500,
@@ -23,18 +19,13 @@ async function getAllUsers() {
 
 async function createUser(event) {
   try {
-    // console.log(event, "------------6")
     const userData = await userController.createUser(event);
-    console.log(userData, "_-------------> 7");
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ userData }),
-    };
+    return { body : JSON.stringify(userData) }
   } catch (error) {
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: "Failed to retrieve users.",
+        error: "Failed to create users.",
         details: error.message,
       }),
     };
