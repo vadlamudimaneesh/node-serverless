@@ -12,6 +12,8 @@ provider:
       Action:
         - dynamodb:DescribeTable
         - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:DeleteItem
         - dynamodb:Query
         - dynamodb:Scan
         - dynamodb:CreateTable   # Add permission to create tables
