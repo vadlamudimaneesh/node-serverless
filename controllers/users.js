@@ -1,90 +1,243 @@
-const { ListTablesCommand, CreateTableCommand, PutItemCommand, GetItemCommand, ScanCommand } = require("@aws-sdk/client-dynamodb");
-const DB = require("../config/db/db").dbClient;
+const {
+  ListTablesCommand,
+  CreateTableCommand,
+  PutItemCommand,
+  GetItemCommand,
+  ScanCommand,
+  DeleteItemCommand,
+  DescribeTableCommand,
+} = require("@aws-sdk/client-dynamodb");
+const { dbClient } = require("../config/db/db");
+const { v1: uuidv1 } = require("uuid");
+const schema = require("../schema");
 
-async function createTable() {
+async function tableChecker(tableName) {
+  const describeCommand = new DescribeTableCommand({
+    TableName: tableName,
+  });
   try {
-    const params = {
-      TableName: "Users",
-      KeySchema: [
-        { AttributeName: "UserID", KeyType: "HASH" }, // Partition key
-      ],
-      AttributeDefinitions: [
-        { AttributeName: "UserID", AttributeType: "S" }, // 'S' for String
-      ],
-      ProvisionedThroughput: {
-        ReadCapacityUnits: 1,
-        WriteCapacityUnits: 1,
-      },
-    };
-    const data = await DB.send(new CreateTableCommand(params));
-    console.log("Table created successfully:", data);
+    let isTableCreated = await dbClient.send(describeCommand);
+    if (isTableCreated.Table.TableStatus === "ACTIVE") {
+      console.log("Table is already created and active", isTableCreated);
+      return true;
+    }
+
+    if (isTableCreated.Table.TableStatus === "CREATING") {
+      console.log(
+        "Table is being created. Waiting for the table to become ACTIVE..."
+      );
+      while (isTableCreated.Table.TableStatus !== "ACTIVE") {
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5 seconds
+        isTableCreated = await dbClient.send(describeCommand);
+      }
+      console.log("Table is now ACTIVE and ready for operations");
+      return true;
+    }
   } catch (error) {
-    console.log(error);
+    if (error.name === "ResourceNotFoundException") {
+      console.log("Table does not exist. Creating table...");
+      const params = {
+        TableName: tableName,
+        AttributeDefinitions: [{ AttributeName: "userId", AttributeType: "S" }],
+        KeySchema: [{ AttributeName: "userId", KeyType: "HASH" }],
+        BillingMode: "PAY_PER_REQUEST",
+      };
+      const createCommand = new CreateTableCommand(params);
+      const data = await dbClient.send(createCommand);
+      console.log("Table creation initiated:", data);
+
+      // Now wait for table to become ACTIVE
+      let isTableCreated = await dbClient.send(describeCommand);
+      while (isTableCreated.Table.TableStatus !== "ACTIVE") {
+        console.log("Waiting for table to become ACTIVE...");
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5 seconds
+        isTableCreated = await dbClient.send(describeCommand);
+      }
+      console.log("Table is now ACTIVE and ready for operations");
+      return true;
+    }
+    throw error;
   }
 }
 
-async function addUser() {
-    try {
-      // Define the item to insert
-      const params = {
-        TableName: "Users",
-        Item: {
-          "UserID": { S: "U0000" }, // 'S' indicates a String type
-          "Name": { S: "Maneesh V" },
-          "Email": { S: "maneeshvadlamudi@gmail.com" },
-          "Age": { N: "28" } // 'N' indicates a Number type
-        }
-      };
-  
-      // Send the PutItemCommand to DynamoDB
-      const data = await DB.send(new PutItemCommand(params));
-      console.log("Item added successfully:", data);
-    } catch (error) {
-      console.error("Error adding item:", error);
-    }
-  }
+async function createUser(event) {
+  try {
+    let tableName = schema.UsersTable.tableName;
+    await tableChecker(tableName);
+    let body =
+      typeof event.body === "string" ? JSON.parse(event.body) : event.body;
+    const params = {
+      TableName: tableName,
+      FilterExpression: "email = :email",
+      ExpressionAttributeValues: {
+        ":email": { S: body.email },
+      },
+    };
+    let existingUser;
+    existingUser = await dbClient.send(new ScanCommand(params));
 
-  async function getUser(userId) {
-    try {
-      const params = {
-        TableName: "Users",
-        Key: {
-          "UserID": { S: userId } // Specify the partition key
-        }
+    if (existingUser.Items && existingUser.Items.length > 0) {
+      let response = {
+        code: 400,
+        status: "failed",
+        data: {
+          message: "User already exists"
+        },
       };
-  
-      const data = await DB.send(new GetItemCommand(params));
-      if (data.Item) {
-        console.log("Retrieved item:", data.Item);
+      console.log(response);
+      return response;
+    } else {
+      // Create new user object
+      const newUser = {
+        userId: { S: uuidv1() },
+        email: { S: body.email },
+        status: { S: "active" },
+        password: { S: body.password },
+        role: { L: [{ S: body.role }] },
+        firstName: { S: body.firstName },
+        lastName: { S: body.lastName },
+        gender: { S: body.gender },
+        mobileNumber: { S: body.mobileNumber },
+      };
+      const putParams = {
+        TableName: tableName,
+        Item: newUser,
+      };
+      await dbClient.send(new PutItemCommand(putParams));
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "User created successfully",
+          userData: newUser,
+        },
+      };
+      return response;
+    }
+  } catch (error) {
+    console.log(error, ":: createUser");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
+  }
+}
+
+// let tablesList = await dbClient.send(new ListTablesCommand({}))
+// let tableDesciption = await dbClient.send( new DescribeTableCommand({TableName : 'Users'}) )
+// let userData = await dbClient.send(new GetItemCommand({TableName : tableName, Key : { userId : { S : query.userId } } }))
+
+async function getUser(event) {
+  try {
+    let tableName = schema.UsersTable.tableName;
+    let query = event.queryStringParameters;
+    console.log(query, "--------query");
+    if (query == null) {
+      let usersList = await dbClient.send(
+        new ScanCommand({ TableName: tableName })
+      );
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "Successfully fetched users list !!!",
+          usersList: usersList.Items,
+        },
+      };
+      return response;
+    } else {
+      let userData = await dbClient.send(
+        new GetItemCommand({
+          TableName: tableName,
+          Key: { userId: { S: query.userId } },
+        })
+      );
+      console.log(userData, "---------userData");
+      if (userData.Item != undefined) {
+        let response = {
+          code: 200,
+          status: "success",
+          data: {
+            message: "Successfully fetched user data !!!",
+            userData: userData.Item,
+          },
+        };
+        return response;
       } else {
-        console.log("No item found with the specified UserID.");
+        let response = {
+          code: 404,
+          status: "success",
+          data: {
+            message: "User not found!!!",
+          },
+        };
+        return response;
       }
-    } catch (error) {
-      console.error("Error retrieving item:", error);
     }
+  } catch (error) {
+    console.log(error, ":: getAllUsers");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
   }
+}
 
-  async function getAllUsers() {
-    try {
-      const params = {
-        TableName: "Users"
+async function deleteUser(event) {
+  try {
+    let tableName = schema.UsersTable.tableName;
+    let body = JSON.parse(event.body);
+    let deleteItem = await dbClient.send(
+      new DeleteItemCommand({
+        TableName: tableName,
+        Key: { userId: { S: body.userId } },
+        ReturnValues: "ALL_OLD",
+      })
+    );
+    if (deleteItem.Attributes) {
+      console.log("Item deleted:", deleteItem.Attributes);
+      let response = {
+        code: 200,
+        status: "success",
+        data: {
+          message: "Successfully deleted the user !!!",
+          deletedUser: deleteItem.Attributes 
+        },
       };
-  
-      const data = await DB.send(new ScanCommand(params));
-      if (data.Items && data.Items.length > 0) {
-        console.log("Retrieved items:");
-        data.Items.forEach(item => console.log(item));
-      } else {
-        console.log("No items found in the table.");
-      }
-    } catch (error) {
-      console.error("Error scanning table:", error);
+      return response;
+    } else {
+      let response = {
+        code: 404,
+        status: "failed",
+        data: {
+          message:  "User not found !!!"
+        },
+      };
+      return response;
     }
+  } catch (error) {
+    console.log(error, ":: deleteUser");
+    let response = {
+      code: 503,
+      status: "error",
+      data: {
+        message: error.name,
+      },
+    };
+    return response;
   }
+}
 
-  module.exports = {
-    createTable,
-    addUser,
-    getAllUsers,
-    getUser
+module.exports = {
+  createUser,
+  getUser,
+  deleteUser,
 };
